@@ -6,3 +6,5 @@ i made it for me
 **SSG new** for create new markdown file
 <br>
 **SSG build** for convert markdown file to html
+-
+### need layout.html on same directory
