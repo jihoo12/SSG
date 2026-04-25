@@ -18,14 +18,14 @@ type PageData struct {
 func main() {
 	// 1. check argument
 	if len(os.Args) < 2 {
-		fmt.Println("사용법: go run main.go [new|build]")
+		fmt.Println("need argument new or build")
 		return
 	}
 
 	command := os.Args[1]
 	today := time.Now().Format("2006-01-02") // date (YYYY-MM-DD)
-	mdFileName := "test/" + today + ".md"
-	htmlFileName := "test/" + today + ".html"
+	mdFileName := today + ".md"
+	htmlFileName := today + ".html"
 
 	switch command {
 	case "new":
