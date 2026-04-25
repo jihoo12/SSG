@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -12,7 +13,7 @@ import (
 
 type PageData struct {
 	Date    string
-	Content template.HTML
+	Contents []template.HTML
 }
 
 func main() {
@@ -55,33 +56,66 @@ func createNewPost(fileName string, date string) {
 
 // build: turn makrdown to html
 func buildPost(mdFile string, htmlFile string, date string) {
-	// read markdown
-	source, err := os.ReadFile(mdFile)
-	if err != nil {
-		fmt.Printf("failed to find markdown file: %s\n", mdFile)
-		return
-	}
+    source, err := os.ReadFile(mdFile)
+    if err != nil {
+        fmt.Printf("❌ Failed to read markdown file: %s\n", mdFile)
+        return
+    }
 
-	// Goldmark 
-	var buf bytes.Buffer
-	if err := goldmark.Convert(source, &buf); err != nil {
-		panic(err)
-	}
-	tmpl, err := template.ParseFiles("layout.html")
-	if err != nil {
-		fmt.Println("failed:", err)
-		return
-	}
+    md := goldmark.New()
+    var htmlSections []template.HTML
 
-	// save html
-	outFile, _ := os.Create(htmlFile)
-	defer outFile.Close()
+    // Convert markdown source to string
+    contentStr := string(source)
 
-	data := PageData{
-		Date:    date,
-		Content: template.HTML(buf.String()),
-	}
+    // Split content into sections using "---" as a delimiter.
+    // If no delimiter is found, the entire file is treated as a single section.
+    var rawSections []string
+    if strings.Contains(contentStr, "\n---\n") {
+        rawSections = strings.Split(contentStr, "\n---\n")
+    } else {
+        rawSections = []string{contentStr}
+    }
 
-	tmpl.Execute(outFile, data)
-	fmt.Printf("success: %s -> %s\n", mdFile, htmlFile)
+    for i, section := range rawSections {
+        // Skip empty sections or sections containing only whitespace
+        if strings.TrimSpace(section) == "" {
+            continue
+        }
+
+        var buf bytes.Buffer
+        if err := md.Convert([]byte(section), &buf); err != nil {
+            fmt.Printf("❌ Error converting section %d: %v\n", i, err)
+            continue
+        }
+        htmlSections = append(htmlSections, template.HTML(buf.String()))
+    }
+
+    // Ensure the template file "layout.html" exists in the current directory
+    tmpl, err := template.ParseFiles("layout.html")
+    if err != nil {
+        fmt.Printf("❌ Failed to load template: %v\n", err)
+        return
+    }
+
+    outFile, err := os.Create(htmlFile)
+    if err != nil {
+        fmt.Printf("❌ Failed to create output file: %v\n", err)
+        return
+    }
+    defer outFile.Close()
+
+    data := PageData{
+        Date:     date,
+        Contents: htmlSections,
+    }
+
+    // Execute template and inject data; log any execution errors to the terminal
+    err = tmpl.Execute(outFile, data)
+    if err != nil {
+        fmt.Printf("❌ Failed to execute template (data injection): %v\n", err)
+        return
+    }
+
+    fmt.Printf("✅ Build successful: %d sections generated -> %s\n", len(htmlSections), htmlFile)
 }
