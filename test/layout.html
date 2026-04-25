@@ -16,11 +16,13 @@
 <body>
     <h2 class="post-title">{{ .Date }}</h2>
     
+    {{ range .Contents }}
     <div class="post-container">
         <div class="markdown-content">
-            {{ .Content }}
+            {{ . }}
         </div>
     </div>
+    {{ end }}
 
     <button id="theme-toggle" class="theme-toggle-btn">
         <span class="icon">☀️</span>
